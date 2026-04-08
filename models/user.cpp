@@ -1,23 +1,37 @@
-#include <iostream>
-#include <string>
-using namespace std;
+#include "user.h"
 
-class User {
-private:
-    int id;
-    string name;
-    string email;
+// Constructor
+User::User(int userId, const string& userName, const string& userEmail)
+    : id(userId), name(userName), email(userEmail) {
+}
 
-public:
-    User(int id, string name, string email) {
-        this->id = id;
-        this->name = name;
-        this->email = email;
-    }
+// Getters
+int User::getId() const {
+    return id;
+}
 
-    void display() {
-        cout << "ID: " << id
-             << ", Name: " << name
-             << ", Email: " << email << endl;
-    }
-};
+string User::getName() const {
+    return name;
+}
+
+string User::getEmail() const {
+    return email;
+}
+
+// Setters
+void User::setName(const string& newName) {
+    name = newName;
+}
+
+void User::setEmail(const string& newEmail) {
+    email = newEmail;
+}
+
+// Display function
+void User::displayUser() const {
+    cout << "\n========== User Information ==========" << endl;
+    cout << "ID: " << id << endl;
+    cout << "Name: " << name << endl;
+    cout << "Email: " << email << endl;
+    cout << "=====================================\n" << endl;
+}

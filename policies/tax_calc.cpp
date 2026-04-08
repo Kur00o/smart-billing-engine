@@ -1,41 +1,44 @@
-#include <iostream>
-#include <string>
-using namespace std;
+#include "tax_calculator.h"
+#include <sstream>
+#include <iomanip>
 
-// Base Class
-class TaxCalculator {
-public:
-    virtual double calculateTax(double amount) = 0;
-    virtual string taxName() = 0;
-};
+// ============================================================
+// GSTCalculator Implementation
+// ============================================================
 
-// GST (India)
-class GSTCalculator : public TaxCalculator {
-public:
-    double calculateTax(double amount) override {
-        return amount * 0.18;
-    }
+const double GSTCalculator::GST_RATE = 0.18;  // Fixed at 18%
 
-    string taxName() override {
-        return "GST (18%)";
-    }
-};
+double GSTCalculator::calculateTax(double amount) {
+    return amount * GST_RATE;
+}
 
-// VAT
-class VATCalculator : public TaxCalculator {
-private:
-    double rate;
+string GSTCalculator::taxName() const {
+    stringstream ss;
+    ss << "GST (" << fixed << setprecision(0) << (GST_RATE * 100) << "%)";
+    return ss.str();
+}
 
-public:
-    VATCalculator(double r) {
-        rate = r;
-    }
+// ============================================================
+// VATCalculator Implementation
+// ============================================================
 
-    double calculateTax(double amount) override {
-        return amount * rate;
-    }
+VATCalculator::VATCalculator(double rate) : vatRate(rate) {
+}
 
-    string taxName() override {
-        return "VAT";
-    }
-};
+double VATCalculator::calculateTax(double amount) {
+    return amount * vatRate;
+}
+
+string VATCalculator::taxName() const {
+    stringstream ss;
+    ss << "VAT (" << fixed << setprecision(1) << (vatRate * 100) << "%)";
+    return ss.str();
+}
+
+void VATCalculator::setVATRate(double rate) {
+    vatRate = rate;
+}
+
+double VATCalculator::getVATRate() const {
+    return vatRate;
+}

@@ -1,0 +1,220 @@
+SMART SUBSCRIPTION & USAGE-BASED BILLING ENGINE
+
+This C++ backend system simulates a SaaS billing platform. It manages subscription plans, tracks usage metrics, applies dynamic pricing rules, calculates discounts and taxes, and generates monthly invoices using core OOP principles.
+
+--------------------------------------------------
+
+OOP DESIGN STRUCTURE
+
+Abstraction is implemented using abstract classes like BillingStrategy and PricingRule.
+
+Inheritance is used where FreePlan, ProPlan, and EnterprisePlan extend SubscriptionPlan.
+
+Polymorphism is used by overriding calculateBill() for different plan types.
+
+Encapsulation is applied in classes like UsageMetrics and BillingDetails using private members.
+
+Composition is used where Subscription contains AddOns and UsageMetrics.
+
+Interfaces are implemented via DiscountPolicy and TaxCalculator using pure virtual functions.
+
+Open-Closed Principle is followed by allowing new PricingRule classes without modifying existing code.
+
+--------------------------------------------------
+
+PROJECT STRUCTURE
+
+smart_billing_engine/
+- main.cpp
+- models/
+- billing/
+- policies/
+- invoice/
+- interface/
+
+--------------------------------------------------
+
+CORE MODELS
+
+User class stores id, name, and email with getters and display function.
+
+SubscriptionPlan is an abstract base class with:
+- calculateBill() as pure virtual
+- getPlanName()
+- getBasePrice()
+- displayPlanDetails()
+
+Derived classes:
+
+FreePlan:
+- Returns 0 if usage <= FREE_LIMIT
+- Charges overage beyond limit
+
+ProPlan:
+- Base price + usage * rate per unit
+
+EnterprisePlan:
+- Flat negotiated rate regardless of usage
+
+--------------------------------------------------
+
+USAGE TRACKING & PRICING ENGINE
+
+BillingStrategy is an abstract class with:
+- calculate(usage, rate)
+- strategyName()
+
+Derived strategies:
+- FlatRateStrategy
+- PerUnitStrategy (usage * rate)
+- TieredStrategy (multi-level pricing)
+
+UsageMetrics structure stores:
+- apiCalls
+- storageGB
+- activeUsers
+- month
+- year
+
+UsageTracker:
+- Records API calls, storage, users
+- Stores data using nested map: userId → date → UsageMetrics
+- Retrieves usage by user and date
+- Resets monthly usage
+- Displays usage
+
+PricingRule abstract class:
+- apply(baseAmount)
+- ruleName()
+
+Derived rules:
+- ProratedRule (based on days used)
+- VolumeDiscountRule (discount if amount exceeds threshold)
+
+PricingEngine:
+- Takes SubscriptionPlan, UsageMetrics, and PricingRules
+- Computes total by applying plan calculation and rules sequentially
+
+--------------------------------------------------
+
+DISCOUNTS, TAXES & ADD-ONS
+
+DiscountPolicy interface:
+- applyDiscount(amount)
+- discountName()
+
+Implementations:
+- NoDiscount
+- PercentageDiscount
+- SeasonalDiscount
+
+TaxCalculator interface:
+- calculateTax(amount)
+- taxName()
+
+Implementations:
+- GSTCalculator (fixed percentage)
+- VATCalculator (custom rate)
+
+AddOn class:
+- Stores name and monthly price
+- Has display function
+
+AddOnFactory:
+- Creates predefined add-ons like Analytics, Backup, Priority Support
+
+Helper function:
+- applyAllAddOns() returns total cost of all add-ons
+
+Billing flow:
+baseAmount → applyDiscount → applyTax → addAddOns → finalBill
+
+--------------------------------------------------
+
+INVOICE SYSTEM
+
+LineItem structure:
+- description
+- amount
+
+Invoice class:
+- Stores userId, month, year
+- Stores list of line items
+- Stores discount and tax info
+
+Functions:
+- addLineItem()
+- setDiscount()
+- setTax()
+- getSubtotal()
+- getTotal()
+- printInvoice()
+- saveToFile()
+
+InvoiceGenerator:
+- Generates invoice using:
+  - SubscriptionPlan
+  - UsageTracker
+  - DiscountPolicy
+  - TaxCalculator
+  - AddOns
+
+Generation logic:
+1. Get usage metrics
+2. Calculate base bill using plan
+3. Add base line item
+4. Add add-ons as line items
+5. Apply discount
+6. Apply tax
+7. Return final invoice
+
+--------------------------------------------------
+
+CLI INTERFACE
+
+Menu-driven system with options:
+- Manage Users
+- Manage Subscriptions
+- Track Usage
+- Configure Billing
+- Generate Invoice
+- Display Users & Plans
+
+Interface class:
+- Runs loop for menu
+- Handles user actions
+- Maintains mapping of user to subscription plan
+
+--------------------------------------------------
+
+INVOICE CALCULATION LOGIC
+
+Subtotal = sum of all line items
+
+Total = subtotal - discount + tax
+
+--------------------------------------------------
+
+TEST SCENARIOS
+
+- Free plan with zero usage → bill = 0
+- Pro plan exceeding usage → overage applied
+- Enterprise plan → flat rate billing
+- Seasonal discount applied correctly
+- Multiple add-ons added correctly
+- Prorated billing works for partial usage
+
+--------------------------------------------------
+
+COMPILATION
+
+Use g++ with all source files and C++17 standard.
+
+--------------------------------------------------
+
+DEVELOPMENT APPROACH
+
+- Build modules independently
+- Follow OOP principles strictly
+- Integrate all components at the end
+- Test with multiple users and plans

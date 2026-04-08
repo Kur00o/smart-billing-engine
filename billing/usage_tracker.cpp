@@ -1,64 +1,110 @@
-#include <iostream>
-#include <map>
-#include <string>
+#include "usage_tracker.h"
+#include <iomanip>
+#include <sstream>
+#include <ctime>
+
 using namespace std;
 
-// UsageRecord holds all three usage dimensions for a given month
-struct UsageRecord {
-    int apiCalls;
-    double storageGB;
-    int activeUsers;
+// Helper function to create YYYY-MM key
+string UsageTracker::createDateKey(int month, int year) const {
+    stringstream ss;
+    ss << year << "-" << setfill('0') << setw(2) << month;
+    return ss.str();
+}
 
-    UsageRecord() : apiCalls(0), storageGB(0.0), activeUsers(0) {}
-    UsageRecord(int calls, double storage, int users)
-        : apiCalls(calls), storageGB(storage), activeUsers(users) {}
-};
-
-// UsageTracker — Encapsulation demo
-// usageData is private; outside code can only interact through methods
-class UsageTracker {
-private:
-    // key = "YYYY-MM" (e.g. "2025-03"), value = usage for that month
-    map<string, UsageRecord> usageData;
-    string userId;
-
-public:
-    UsageTracker(const string& uid) : userId(uid) {}
-
-    // Record usage for a specific month
-    void recordUsage(const string& month, int apiCalls, double storageGB, int activeUsers) {
-        // If an entry already exists, add on top of it (usage accumulates)
-        usageData[month].apiCalls     += apiCalls;
-        usageData[month].storageGB    += storageGB;
-        usageData[month].activeUsers   = activeUsers; // active users = snapshot, not cumulative
+// Helper function to get or create usage entry
+UsageMetrics& UsageTracker::getOrCreateUsage(int userId, int month, int year) {
+    string dateKey = createDateKey(month, year);
+    
+    if (usageData[userId].find(dateKey) == usageData[userId].end()) {
+        usageData[userId][dateKey] = UsageMetrics();
+        usageData[userId][dateKey].month = month;
+        usageData[userId][dateKey].year = year;
     }
+    
+    return usageData[userId][dateKey];
+}
 
-    // Primary pipeline entry point: getUsage()
-    UsageRecord getUsage(const string& month) const {
-        auto it = usageData.find(month);
-        if (it != usageData.end()) {
-            return it->second;
+// Record API calls for a user in current month/year
+void UsageTracker::recordApiCall(int userId, long calls) {
+    // Get current month/year
+    time_t now = time(0);
+    struct tm* timeinfo = localtime(&now);
+    int month = timeinfo->tm_mon + 1;  // tm_mon is 0-based
+    int year = timeinfo->tm_year + 1900;
+    
+    UsageMetrics& metrics = getOrCreateUsage(userId, month, year);
+    metrics.apiCalls += calls;
+}
+
+// Record storage usage for a user
+void UsageTracker::recordStorage(int userId, double gb) {
+    time_t now = time(0);
+    struct tm* timeinfo = localtime(&now);
+    int month = timeinfo->tm_mon + 1;
+    int year = timeinfo->tm_year + 1900;
+    
+    UsageMetrics& metrics = getOrCreateUsage(userId, month, year);
+    metrics.storageGB += gb;
+}
+
+// Record active users count
+void UsageTracker::recordUsers(int userId, int count) {
+    time_t now = time(0);
+    struct tm* timeinfo = localtime(&now);
+    int month = timeinfo->tm_mon + 1;
+    int year = timeinfo->tm_year + 1900;
+    
+    UsageMetrics& metrics = getOrCreateUsage(userId, month, year);
+    metrics.activeUsers = count;  // Set, not accumulate
+}
+
+// Retrieve usage metrics for a specific month/year
+UsageMetrics UsageTracker::getUsage(int userId, int month, int year) const {
+    string dateKey = createDateKey(month, year);
+    
+    auto userIt = usageData.find(userId);
+    if (userIt != usageData.end()) {
+        auto metricsIt = userIt->second.find(dateKey);
+        if (metricsIt != userIt->second.end()) {
+            return metricsIt->second;
         }
-        // Return zeroed record if no data exists for that month
-        return UsageRecord();
     }
+    
+    // Return empty metrics if not found
+    UsageMetrics empty;
+    empty.month = month;
+    empty.year = year;
+    return empty;
+}
 
-    // Utility: print usage summary for a month
-    void printUsage(const string& month) const {
-        UsageRecord rec = getUsage(month);
-        cout << "========== Usage Report ==========\n";
-        cout << "User ID     : " << userId << "\n";
-        cout << "Month       : " << month << "\n";
-        cout << "API Calls   : " << rec.apiCalls << "\n";
-        cout << "Storage     : " << rec.storageGB << " GB\n";
-        cout << "Active Users: " << rec.activeUsers << "\n";
-        cout << "==================================\n";
+// Reset monthly usage for a user
+void UsageTracker::resetMonthlyUsage(int userId) {
+    if (usageData.find(userId) != usageData.end()) {
+        usageData[userId].clear();
     }
+}
 
-    // Utility: check if any data recorded for that month
-    bool hasData(const string& month) const {
-        return usageData.find(month) != usageData.end();
+// Display all usage for a specific user
+void UsageTracker::displayUsage(int userId) const {
+    auto userIt = usageData.find(userId);
+    
+    if (userIt == usageData.end()) {
+        cout << "No usage data found for user " << userId << endl;
+        return;
     }
-
-    string getUserId() const { return userId; }
-};
+    
+    cout << "\n========== Usage Summary for User " << userId << " ==========" << endl;
+    
+    for (const auto& entry : userIt->second) {
+        const string& dateKey = entry.first;
+        const UsageMetrics& metrics = entry.second;
+        
+        cout << "\nDate: " << dateKey << endl;
+        cout << "  API Calls: " << metrics.apiCalls << endl;
+        cout << "  Storage: " << fixed << setprecision(2) << metrics.storageGB << " GB" << endl;
+        cout << "  Active Users: " << metrics.activeUsers << endl;
+    }
+    
+    cout << "========================================================\n" << endl;
+}
